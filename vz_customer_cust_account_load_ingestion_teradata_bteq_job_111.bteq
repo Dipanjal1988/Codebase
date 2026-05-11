@@ -1,0 +1,110 @@
+/*
+FILE_NAME_CONTEXT: Verizon customer.cust_account ingestion lineage job
+JOB_ID: 111
+JOB_TYPE: ingestion
+DIALECT: teradata_bteq
+SOURCE_OBJECT: ftr_raw.customer_cust_account
+TARGET_OBJECT: vz_curated.customer_cust_account_ingestion
+*/
+.LOGON vz_edw/prod_user,$PASSWORD;
+.SET ERROROUT STDOUT;
+DATABASE vz_edw;
+
+INSERT INTO audit_control.job_run_log
+(job_id, job_name, domain_name, source_system, target_table, run_status, start_ts)
+VALUES
+(111, 'vz_ingestion_customer_cust_account', 'customer', 'FTR_DBX', 'vz_curated.customer_cust_account_ingestion', 'STARTED', CURRENT_TIMESTAMP);
+
+CREATE MULTISET VOLATILE TABLE vt_customer_cust_account_111 AS
+(
+  SELECT
+       s.customer_id,
+       s.account_id,
+       s.ban,
+       s.msisdn,
+       s.first_name,
+       s.last_name,
+       s.email_addr,
+       s.segment_code,
+       s.tenure_months,
+       s.customer_status,
+       s.preferred_channel,
+       s.privacy_flag,
+       s.consent_status,
+       s.zip_code,
+       s.state_code,
+       s.market_area,
+       s.line_count,
+       s.fiber_eligible,
+       s.credit_class,
+       s.batch_id,
+       s.source_system,
+       s.load_ts,
+       s.effective_start_ts,
+       s.effective_end_ts,
+       CURRENT_TIMESTAMP AS lineage_load_ts,
+       HASHROW(customer_id, account_id, ban, msisdn, first_name) AS lineage_hash
+  FROM ftr_raw.customer_cust_account s
+  WHERE s.record_status = 'ACTIVE'
+    AND s.load_ts >= CURRENT_DATE - INTERVAL '3' DAY
+) WITH DATA PRIMARY INDEX (customer_id) ON COMMIT PRESERVE ROWS;
+
+DELETE FROM vz_curated.customer_cust_account_ingestion
+WHERE customer_id IN (SELECT customer_id FROM vt_customer_cust_account_111);
+
+INSERT INTO vz_curated.customer_cust_account_ingestion
+(customer_id, account_id, ban, msisdn, first_name, last_name, email_addr, segment_code, tenure_months, customer_status, preferred_channel, privacy_flag, consent_status, zip_code, state_code, market_area, line_count, fiber_eligible, credit_class, batch_id, source_system, load_ts, effective_start_ts, effective_end_ts, lineage_load_ts, lineage_hash)
+SELECT customer_id, account_id, ban, msisdn, first_name, last_name, email_addr, segment_code, tenure_months, customer_status, preferred_channel, privacy_flag, consent_status, zip_code, state_code, market_area, line_count, fiber_eligible, credit_class, batch_id, source_system, load_ts, effective_start_ts, effective_end_ts, lineage_load_ts, lineage_hash
+FROM vt_customer_cust_account_111;
+
+COLLECT STATISTICS COLUMN (customer_id) ON vz_curated.customer_cust_account_ingestion;
+
+UPDATE audit_control.job_run_log
+SET run_status='COMPLETED', end_ts=CURRENT_TIMESTAMP
+WHERE job_id=111;
+
+.LOGOFF;
+.QUIT 0;
+-- lineage_detail_001: source to target dependency retained for parser validation
+-- lineage_detail_002: source to target dependency retained for parser validation
+-- lineage_detail_003: source to target dependency retained for parser validation
+-- lineage_detail_004: source to target dependency retained for parser validation
+-- lineage_detail_005: source to target dependency retained for parser validation
+-- lineage_detail_006: source to target dependency retained for parser validation
+-- lineage_detail_007: source to target dependency retained for parser validation
+-- lineage_detail_008: source to target dependency retained for parser validation
+-- lineage_detail_009: source to target dependency retained for parser validation
+-- lineage_detail_010: source to target dependency retained for parser validation
+-- lineage_detail_011: source to target dependency retained for parser validation
+-- lineage_detail_012: source to target dependency retained for parser validation
+-- lineage_detail_013: source to target dependency retained for parser validation
+-- lineage_detail_014: source to target dependency retained for parser validation
+-- lineage_detail_015: source to target dependency retained for parser validation
+-- lineage_detail_016: source to target dependency retained for parser validation
+-- lineage_detail_017: source to target dependency retained for parser validation
+-- lineage_detail_018: source to target dependency retained for parser validation
+-- lineage_detail_019: source to target dependency retained for parser validation
+-- lineage_detail_020: source to target dependency retained for parser validation
+-- lineage_detail_021: source to target dependency retained for parser validation
+-- lineage_detail_022: source to target dependency retained for parser validation
+-- lineage_detail_023: source to target dependency retained for parser validation
+-- lineage_detail_024: source to target dependency retained for parser validation
+-- lineage_detail_025: source to target dependency retained for parser validation
+-- lineage_detail_026: source to target dependency retained for parser validation
+-- lineage_detail_027: source to target dependency retained for parser validation
+-- lineage_detail_028: source to target dependency retained for parser validation
+-- lineage_detail_029: source to target dependency retained for parser validation
+-- lineage_detail_030: source to target dependency retained for parser validation
+-- lineage_detail_031: source to target dependency retained for parser validation
+-- lineage_detail_032: source to target dependency retained for parser validation
+-- lineage_detail_033: source to target dependency retained for parser validation
+-- lineage_detail_034: source to target dependency retained for parser validation
+-- lineage_detail_035: source to target dependency retained for parser validation
+-- lineage_detail_036: source to target dependency retained for parser validation
+-- lineage_detail_037: source to target dependency retained for parser validation
+-- lineage_detail_038: source to target dependency retained for parser validation
+-- lineage_detail_039: source to target dependency retained for parser validation
+-- lineage_detail_040: source to target dependency retained for parser validation
+-- lineage_detail_041: source to target dependency retained for parser validation
+-- lineage_detail_042: source to target dependency retained for parser validation
+-- lineage_detail_043: source to target dependency retained for parser validation
