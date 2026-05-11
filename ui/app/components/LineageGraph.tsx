@@ -4,6 +4,7 @@ import ReactFlow, {
   Controls,
   MiniMap,
   MarkerType,
+  Position,
   type Edge,
   type Node,
 } from "reactflow";
@@ -83,8 +84,8 @@ function layoutNodes(nodes: LineageNode[], edges: LineageEdge[]): Node[] {
           fontSize: 12,
           width: 280,
         },
-        sourcePosition: "right" as const,
-        targetPosition: "left" as const,
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
       });
     });
   });
