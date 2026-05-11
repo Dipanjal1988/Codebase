@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { @apply bg-slate-50 text-slate-800; }
+
+.kbd {
+  @apply inline-flex items-center px-1.5 py-0.5 rounded border border-slate-300 bg-white text-xs text-slate-600 font-mono;
+}
+
+/* Pretty <pre> for code-ish bits */
+.codeish {
+  @apply font-mono text-[12.5px] bg-slate-100 rounded px-1.5 py-0.5 text-slate-700;
+}
+
+/* React Flow override */
+.react-flow__attribution { display: none; }

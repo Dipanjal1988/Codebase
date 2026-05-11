@@ -2,3 +2,10 @@ __pycache__/
 *.pyc
 .venv/
 .streamlit/
+
+# Next.js
+ui/node_modules/
+ui/.next/
+ui/out/
+ui/.turbo/
+ui/next-env.d.ts
