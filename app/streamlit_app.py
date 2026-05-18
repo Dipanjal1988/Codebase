@@ -21,6 +21,13 @@ import streamlit as st
 import graphviz
 
 from app.parser import load_all_jobs, jobs_by_table, domain_summary, JobRecord
+from app.bq_client import (
+    BQError,
+    bq_available,
+    current_project,
+    list_datasets,
+    list_tables,
+)
 
 
 st.set_page_config(page_title="Lineage Agent", layout="wide")
@@ -278,6 +285,85 @@ def render_domain_summary() -> None:
     st.graphviz_chart(g)
 
 
+# ---------- Mode 5: BigQuery Tables (via bq CLI) ----------
+
+def render_bigquery_tables() -> None:
+    st.header("BigQuery Tables (via `bq` CLI)")
+
+    if not bq_available():
+        st.error(
+            "The `bq` CLI is not installed or not on PATH. "
+            "Install the Google Cloud SDK and run `gcloud auth login` to use this view."
+        )
+        st.code("https://cloud.google.com/sdk/docs/install", language="text")
+        return
+
+    default_project = current_project() or ""
+    project = st.text_input(
+        "Project ID (leave blank to use the default from `bq` / `gcloud`)",
+        value=default_project,
+    ).strip() or None
+
+    if st.button("Refresh", type="primary"):
+        st.cache_data.clear()
+
+    @st.cache_data(show_spinner="Listing datasets...")
+    def _datasets(p: str | None):
+        return list_datasets(p)
+
+    @st.cache_data(show_spinner="Listing tables...")
+    def _tables(project_id: str, dataset_id: str):
+        from app.bq_client import Dataset
+        return list_tables(Dataset(project_id=project_id, dataset_id=dataset_id))
+
+    try:
+        datasets = _datasets(project)
+    except BQError as e:
+        st.error(str(e))
+        return
+
+    if not datasets:
+        st.info("No datasets visible to the authenticated principal in this project.")
+        return
+
+    st.caption(
+        f"Connected as the active `bq` principal. "
+        f"Project: `{project or '(default)'}` — {len(datasets)} dataset(s) visible."
+    )
+
+    all_rows: list[dict] = []
+    for ds in datasets:
+        try:
+            tables = _tables(ds.project_id, ds.dataset_id)
+        except BQError as e:
+            st.warning(f"Could not list tables in `{ds.qualified}`: {e}")
+            continue
+        for t in tables:
+            all_rows.append({
+                "Project": t.project_id,
+                "Dataset": t.dataset_id,
+                "Table": t.table_id,
+                "Type": t.table_type,
+                "Qualified Name": t.qualified,
+            })
+
+    if not all_rows:
+        st.info("Datasets are visible but contain no tables (or insufficient permissions).")
+        return
+
+    df = pd.DataFrame(all_rows)
+    dataset_filter = st.multiselect(
+        "Filter by dataset",
+        options=sorted(df["Dataset"].unique()),
+        default=[],
+    )
+    if dataset_filter:
+        df = df[df["Dataset"].isin(dataset_filter)]
+
+    st.subheader(f"Tables ({len(df)})")
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+
 # ---------- Sidebar router ----------
 
 MODES = {
@@ -285,6 +371,7 @@ MODES = {
     "Table-level Lineage with Metadata": render_table_lineage,
     "Column-level Lineage with Metadata": render_column_lineage,
     "Domain Summary": render_domain_summary,
+    "BigQuery Tables (bq CLI)": render_bigquery_tables,
 }
 
 st.sidebar.title("Lineage Agent")
